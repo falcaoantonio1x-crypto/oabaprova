@@ -45,6 +45,15 @@ export async function computeAndRender(db, els){
   const worst=temaEntries.slice().sort((a,b)=>errRate(b[1])-errRate(a[1])).slice(0,12);
   els.worstTema.innerHTML = worst.length ? worst.map(([k,v])=>{
     const [d,t]=k.split("|");
+
+  const best = temaEntries.slice().sort((a,b)=>accRate(b[1])-accRate(a[1])).slice(0,12);
+  if(els.bestTema){
+    els.bestTema.innerHTML = best.length ? best.map(([k,v])=>{
+      const [d,t]=k.split("|");
+      const a=Math.round(accRate(v)*100);
+      return `<div class="item"><div class="t">${escapeHtml(t)} <span class="badge">${escapeHtml(d)}</span></div><div class="d">Acerto: ${a}% • Resp: ${v.r}</div></div>`;
+    }).join("") : `<div class="item"><div class="d">Sem temas com volume suficiente (>=6).</div></div>`;
+  }
     const e=Math.round(errRate(v)*100);
     return `<div class="item"><div class="t">${escapeHtml(t)} <span class="badge">${escapeHtml(d)}</span></div><div class="d">Erro: ${e}% • Resp: ${v.r}</div></div>`;
   }).join("") : `<div class="item"><div class="d">Sem temas com volume suficiente (>=6).</div></div>`;

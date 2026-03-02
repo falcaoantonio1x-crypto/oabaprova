@@ -7,6 +7,8 @@ import { renderMapa } from "./mapa.js";
 import { renderErros } from "./revisao.js";
 
 const LS_ERR="oab_errors_v4";
+const BANK_SEED="v3-2026-03-02"; // muda quando atualizar o banco/heurísticas
+
 function loadErr(){ try{return JSON.parse(localStorage.getItem(LS_ERR)||"[]")}catch{return []} }
 function saveErr(v){ localStorage.setItem(LS_ERR, JSON.stringify(v)); }
 
@@ -19,7 +21,7 @@ function tabs(){
       setActiveTab(name);
       if(name==="dashboard") await computeAndRender(state.db, {
         dTotal: $("dTotal"), dResp: $("dResp"), dAcc: $("dAcc"), dSpeed: $("dSpeed"),
-        heatDisc: $("heatDisc"), worstTema: $("worstTema"), worstSub: $("worstSub"), slowTema: $("slowTema")
+        heatDisc: $("heatDisc"), worstTema: $("worstTema"), bestTema: $("bestTema"), worstSub: $("worstSub"), slowTema: $("slowTema")
       });
       if(name==="mapa") await renderMapa(state.db, {mapDisc:$("mapDisc"), mapTema:$("mapTema")});
       if(name==="revisao") await renderErros(state.db, {listErros:$("listErros")}, state.erros);
@@ -115,6 +117,24 @@ async function renderQuestion(){
   box.querySelectorAll(".alt").forEach(btn=>btn.addEventListener("click", ()=>onAnswer(q, btn.dataset.letter)));
 }
 
+
+function pickStr(v){ return (v??"").toString().trim(); }
+
+function defaultComentario(q, fund){
+  const disc = pickStr(q.disciplina) || "a disciplina";
+  const tema = (pickStr(q.tema) && pickStr(q.tema)!=="Geral") ? pickStr(q.tema) : "o tema cobrado";
+  const base = fund.length ? `Base: ${fund.join(" • ")}.` : "Base: legislação aplicável.";
+  return `O ponto aqui é ${tema} em ${disc}. ${base} A alternativa correta é a que respeita a regra principal (e não uma exceção/pegadinha).`;
+}
+function defaultPegadinha(q){
+  const tema = (pickStr(q.tema) && pickStr(q.tema)!=="Geral") ? pickStr(q.tema) : "o tema";
+  return `Pegadinha comum: confundir a regra geral de ${tema} com exceções ou trocar conceitos parecidos.`;
+}
+function defaultExemplo(q){
+  const disc = pickStr(q.disciplina) || "a matéria";
+  return `Exemplo simples: pensa num caso cotidiano e aplica a regra básica de ${disc} sem inventar exceções.`;
+}
+
 function youtubeLink(q){
   const law=Array.isArray(q.fundamentacao_legal)?q.fundamentacao_legal.join(" "):(q.fundamentacao_legal||"");
   const query=encodeURIComponent(`${q.disciplina||"OAB"} ${q.tema||""} ${q.subtema||""} ${law}`.trim());
@@ -143,24 +163,33 @@ async function onAnswer(q, chosen){
 
   const fund = Array.isArray(q.fundamentacao_legal)?q.fundamentacao_legal:(q.fundamentacao_legal?[q.fundamentacao_legal]:[]);
   const video = q.video_reforco || youtubeLink(q);
+  const comentario = pickStr(q.comentario_tecnico) || defaultComentario(q, fund);
+  const pegadinha = pickStr(q.erro_comum_aluno) || defaultPegadinha(q);
+  const exemplo = pickStr(q.exemplo_simples) || defaultExemplo(q);
   const fb=document.getElementById("feedback");
 
   fb.innerHTML = `${correct
     ? `<span style="color:var(--ok);font-weight:900">Certo.</span>`
     : `<span style="color:var(--bad);font-weight:900">Errado.</span>`}
-    <div class="note" style="margin-top:8px"><b>Comentário (por que é isso):</b> ${escapeHtml(q.comentario_tecnico||"Sem comentário técnico ainda.")}</div>
+    <div class="note" style="margin-top:8px"><b>Comentário (por que é isso):</b> ${escapeHtml(comentario)}</div>
     <div class="note" style="margin-top:8px"><b>Fundamento legal:</b> ${escapeHtml(fund.join(" • ")||"—")}</div>
-    <div class="note" style="margin-top:8px"><b>Pegadinha/erro comum:</b> ${escapeHtml(q.erro_comum_aluno||"—")}</div>
-    <div class="note" style="margin-top:8px"><b>Exemplo simples:</b> ${escapeHtml(q.exemplo_simples||"—")}</div>
+    <div class="note" style="margin-top:8px"><b>Pegadinha/erro comum:</b> ${escapeHtml(pegadinha)}</div>
+    <div class="note" style="margin-top:8px"><b>Exemplo simples:</b> ${escapeHtml(exemplo)}</div>
     <div class="note" style="margin-top:10px"><a href="${escapeAttr(video)}" target="_blank" rel="noopener">Vídeo do tema</a></div>
     <div class="note" style="margin-top:8px">Tempo: <b>${Math.round(ms/1000)}s</b></div>`;
 
-  setTimeout(async ()=>{
+  // Avança só quando tu clicar (comentário não some)
+  const nextBtn = document.createElement("button");
+  nextBtn.textContent = "Próxima questão";
+  nextBtn.className = "btn";
+  nextBtn.style.marginTop = "12px";
+  nextBtn.onclick = async () => {
     state.session.idx++;
     if(correct) state.session.acertos++;
     await updateKPIs();
     await renderQuestion();
-  }, 700);
+  };
+  fb.appendChild(nextBtn);
 }
 
 function hooks(){
@@ -252,6 +281,16 @@ function hooks(){
 async function boot(){
   tabs();
   state.db = await openDB();
+  // Se mudou a seed (banco/heurística), atualiza do data/questoes.json sem apagar teu progresso
+  const prevSeed = await getMeta(state.db, "bank_seed", null);
+  if(prevSeed !== BANK_SEED){
+    try{
+      await loadFromDataJson();
+      await putMeta(state.db, "bank_seed", BANK_SEED);
+    }catch(e){
+      // se falhar, cai pro ensureBank (ex: offline)
+    }
+  }
   await ensureBank();
   await rebuildFilters();
   await updateKPIs();

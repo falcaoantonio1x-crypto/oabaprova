@@ -103,6 +103,15 @@ export async function bulkUpsertQuestions(db,questions){
             avgTimeMs:0,
             history:[]
           });
+        } else {
+          // mantém progresso, mas sincroniza metadados (disciplina/tema/subtema) para filtros/índices corretos
+          const old = get.result;
+          cs.put({
+            ...old,
+            disciplina:q.disciplina||old.disciplina||"Sem disciplina",
+            tema:q.tema||old.tema||"Sem tema",
+            subtema:q.subtema||old.subtema||""
+          });
         }
         cur.continue();
       };
