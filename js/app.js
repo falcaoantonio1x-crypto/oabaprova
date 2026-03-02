@@ -139,15 +139,16 @@ function defaultExemplo(q){
 
 function renderRefs(q){
   const refs = Array.isArray(q.refs) ? q.refs : [];
-  if(!refs.length) return "<span class=\"mono\">—</span>";
-  const items = refs.slice(0,4).map(r=>{
-    const fonte = (r.fonte||"").toString();
+  if(!refs.length) return `<span class="mono">—</span>`;
+  const items = refs.slice(0,6).map(r=>{
+    const fonte = (r.fonte||"").toString().replace(/^Resolução\s+/i,"Res. ");
     const disp = (r.dispositivo||"").toString();
     const url = (r.url||"").toString();
-    const label = [fonte, disp].filter(Boolean).join(" — ");
-    return url ? `<a href="${escapeAttr(url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>` : escapeHtml(label);
-  }).join(" • ");
-  return items || "<span class=\"mono\">—</span>";
+    const label = fonte ? fonte : "Fonte";
+    const inner = `<span>${escapeHtml(label)}</span>${disp?` <small>${escapeHtml(disp)}</small>`:""}`;
+    return url ? `<a class="chip" href="${escapeAttr(url)}" target="_blank" rel="noopener">${inner}</a>` : `<span class="chip">${inner}</span>`;
+  }).join("");
+  return `<div class="chips">${items}</div>`;
 }
 function renderAltRationales(q){
   const alts = q.alternativas || {};
@@ -197,20 +198,43 @@ async function onAnswer(q, chosen){
   const exemplo = pickStr(q.exemplo_simples) || defaultExemplo(q);
   const fb=document.getElementById("feedback");
 
-  fb.innerHTML = `${correct
-    ? `<span style="color:var(--ok);font-weight:900">Certo.</span>`
-    : `<span style="color:var(--bad);font-weight:900">Errado.</span>`}
-    <div class="note" style="margin-top:8px"><b>Comentário (por que é isso):</b> ${escapeHtml(comentario)}</div>
-    <div class="note" style="margin-top:8px"><b>Fundamento legal:</b> ${fund.length?escapeHtml(fund.join(" • ")):""} ${renderRefs(q)}</div>
-    <div class="note" style="margin-top:8px"><b>Pegadinha/erro comum:</b> ${escapeHtml(pegadinha)}</div>
-    <div class="note" style="margin-top:8px"><b>Exemplo simples:</b> ${escapeHtml(exemplo)}</div>
-    <div class="note" style="margin-top:10px"><a href="${escapeAttr(video)}" target="_blank" rel="noopener">Vídeo do tema</a></div>
-    <div class="note" style="margin-top:8px">Tempo: <b>${Math.round(ms/1000)}s</b></div>`;
+  fb.innerHTML = `
+    <div class="feedback">
+      <div class="fbHead">
+        <div class="status" style="color:${correct?"var(--ok)":"var(--bad)"}">${correct?"✅ Certo":"❌ Errado"}</div>
+        <div class="badge">⏱️ ${Math.round(ms/1000)}s</div>
+      </div>
 
+      <div class="fbBox">
+        <div class="ttl">Comentário</div>
+        <div class="txt">${escapeHtml(comentario)}</div>
+      </div>
+
+      <div class="fbBox">
+        <div class="ttl">Fundamento legal</div>
+        <div class="txt">Fontes oficiais (toque para abrir):</div>
+        ${renderRefs(q)}
+      </div>
+
+      <div class="fbBox">
+        <div class="ttl">Pegadinha</div>
+        <div class="txt">${escapeHtml(pegadinha)}</div>
+      </div>
+
+      <div class="fbBox">
+        <div class="ttl">Exemplo simples</div>
+        <div class="txt">${escapeHtml(exemplo)}</div>
+      </div>
+
+      <div class="fbActions" id="fbActions">
+        <a class="linkBtn" href="${escapeAttr(video)}" target="_blank" rel="noopener">▶️ Vídeo do tema</a>
+      </div>
+    </div>
+  `;
   // Avança só quando tu clicar (comentário não some)
   const nextBtn = document.createElement("button");
   nextBtn.textContent = "Próxima questão";
-  nextBtn.className = "btn";
+  nextBtn.className = "btn nextBtn";
   nextBtn.style.marginTop = "12px";
   nextBtn.onclick = async () => {
     state.session.idx++;
@@ -218,7 +242,7 @@ async function onAnswer(q, chosen){
     await updateKPIs();
     await renderQuestion();
   };
-  fb.appendChild(nextBtn);
+  document.getElementById("fbActions")?.appendChild(nextBtn);
 }
 
 function hooks(){

@@ -14,6 +14,8 @@ const THEME_KEY="oab_theme_pref";
 export function initTheme(){
   try{
     const saved = localStorage.getItem(THEME_KEY);
+    // default: light (mais agradável no celular)
+    if(!saved){ document.documentElement.classList.add("theme-light"); return; }
     if(saved==="light") document.documentElement.classList.add("theme-light");
     if(saved==="dark") document.documentElement.classList.add("theme-dark");
   }catch{}

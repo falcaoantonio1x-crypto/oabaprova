@@ -14,18 +14,6 @@
 }
 
 /* Dark mode (auto) */
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg:#0b1220;
-    --card:#111a2b;
-    --muted:#93a4bf;
-    --txt:#eaf0ff;
-    --ok:#35c46b;
-    --bad:#ff5a67;
-    --accent:#5aa9ff;
-    --line:#243552;
-    --shadow: 0 10px 34px rgba(0,0,0,.35);
-  }
 }
 
 /* Forced theme classes (toggle) */
@@ -333,3 +321,37 @@ details.cfg>summary::-webkit-details-marker{display:none}
   .btn{width:100%}
   .row.between .row:last-child .btn{width:auto}
 }
+
+/* Chips / links */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 10px;border-radius:999px;
+  border:1px solid var(--line);
+  background: color-mix(in oklab, var(--card) 92%, var(--bg));
+  font-size:13px;color:var(--txt);
+}
+.chip small{color:var(--muted);font-weight:700}
+a.chip{color:var(--txt);text-decoration:none}
+a.chip:hover{border-color: color-mix(in oklab, var(--accent) 50%, var(--line));}
+
+/* Feedback layout */
+.feedback{margin-top:10px;display:grid;gap:10px}
+.fbHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fbHead .status{font-weight:1000;font-size:14px}
+.fbBox{border:1px solid var(--line);background: color-mix(in oklab, var(--card) 94%, var(--bg));border-radius:16px;padding:12px}
+.fbBox .ttl{font-weight:900;margin-bottom:6px}
+.fbBox .txt{color:var(--muted);line-height:1.45}
+.fbActions{display:grid;gap:10px;margin-top:10px}
+.linkBtn{
+  display:inline-flex;justify-content:center;align-items:center;
+  width:100%;
+  border-radius:14px;
+  padding:12px 14px;
+  border:1px solid color-mix(in oklab, var(--accent) 40%, var(--line));
+  background: color-mix(in oklab, var(--accent) 14%, var(--card));
+  color: var(--txt);
+  font-weight: 900;
+}
+.linkBtn:hover{filter:brightness(1.02)}
+.nextBtn{width:100%}
